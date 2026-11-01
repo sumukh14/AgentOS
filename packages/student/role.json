@@ -1,0 +1,22 @@
+{
+  "kind": "role",
+  "schema_version": 1,
+  "role": {
+    "id": "student",
+    "name": "Student",
+    "description": "Supplied study material to notes and a reviewed quiz with answer key.",
+    "agents": [
+      "student_notes",
+      "student_quiz",
+      "student_focus",
+      "student_planner",
+      "student_research",
+      "student_source_focus",
+      "student_source_notes",
+      "student_source_quiz",
+      "student_summary",
+      "student_source_planner"
+    ],
+    "tools": []
+  }
+}

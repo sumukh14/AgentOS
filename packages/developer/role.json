@@ -1,0 +1,22 @@
+{
+  "kind": "role",
+  "schema_version": 1,
+  "role": {
+    "id": "developer",
+    "name": "Developer",
+    "description": "Investigate issues, propose scoped code changes, and verify results.",
+    "agents": [
+      "investigation",
+      "code_helper",
+      "testing",
+      "developer_planner",
+      "baseline_testing",
+      "issue_specification"
+    ],
+    "tools": [
+      "filesystem",
+      "git",
+      "terminal"
+    ]
+  }
+}

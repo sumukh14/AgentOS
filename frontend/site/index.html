@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101923">
+  <meta name="description" content="AgentOS: an interactive study of single-agent MCP and hierarchical multi-agent orchestration for enterprise workflows.">
+  <title>AgentOS — The architecture of dependable work</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="polish.css">
+  <link rel="stylesheet" href="motion.css">
+  <link rel="stylesheet" href="human.css">
+  <link rel="stylesheet" href="backend.css">
+  <link rel="stylesheet" href="creature.css">
+  <link rel="stylesheet" href="threed.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="page-progress" aria-hidden="true"><span></span></div>
+  <header class="nav" id="top">
+    <a class="brand" href="#top" aria-label="AgentOS home"><span class="brand-symbol"><i></i><i></i><i></i></span><span>Agent<span class="brand-accent">OS</span><small> / RESEARCH INTERFACE</small></span></a>
+    <nav aria-label="Main navigation" id="main-nav"><a href="#question">The question</a><a href="#lab">Interactive lab</a><a href="#method">Method</a><a href="#live">Live system</a></nav>
+    <a href="#lab" class="nav-cta">Enter the lab <span>↗</span></a>
+    <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Toggle menu"><span></span><span></span></button>
+  </header>
+  <nav class="chapter-rail" aria-label="Explore sections"><a href="#top" data-chapter="top" aria-label="Go to introduction"><i></i><span>00 / INTRO</span></a><a href="#question" data-chapter="question" aria-label="Go to research question"><i></i><span>01 / QUESTION</span></a><a href="#lab" data-chapter="lab" aria-label="Go to interactive lab"><i></i><span>02 / LAB</span></a><a href="#method" data-chapter="method" aria-label="Go to method"><i></i><span>03 / METHOD</span></a><a href="#live" data-chapter="live" aria-label="Go to live system"><i></i><span>04 / LIVE</span></a></nav>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-grid" aria-hidden="true"></div>
+      <div class="hero-topline reveal"><span class="edition">BRB 90 — V1.0</span></div>
+      <div class="hero-main">
+        <div class="hero-copy">
+          <p class="eyebrow reveal">An interactive research synopsis <span>01 / 04</span></p>
+          <h1 id="hero-title" class="reveal delay-1">When work<br>gets complex,<br><em>who thinks next?</em></h1>
+          <p class="hero-summary reveal delay-2">One agent with every tool. Or a team of agents with a plan, memory, and a second pair of eyes. AgentOS puts both architectures on the same task.</p>
+          <div class="hero-actions reveal delay-3"><a class="pill-button" href="#lab">Explore the simulation <span>↗</span></a><a class="quiet-link" href="#question">Understand the question <span>↓</span></a></div>
+        </div>
+        <div class="hero-visual reveal delay-2" aria-label="Animated diagram of one agent branching into a coordinated network">
+          <div class="visual-halo halo-a"></div><div class="visual-halo halo-b"></div><div class="visual-halo halo-c"></div>
+          <canvas class="agent-field" id="agent-field" aria-hidden="true"></canvas>
+          <button class="eye-orb" id="eye-orb" type="button" aria-label="Wobble the curious agent. Drag or tap to play."><span class="eye-orb-shine"></span><span class="eye-orb-eyes"><i><b></b></i><i><b></b></i></span><span class="eye-orb-mouth"></span><span class="eye-orb-count" id="eye-orb-count">00</span></button>
+          <svg viewBox="0 0 600 600" role="img" aria-label="Connections between a central coordinator and four specialist agents">
+            <path class="flow-line" d="M300 300 C225 226 187 189 116 123"/><path class="flow-line" d="M300 300 C389 228 423 204 494 143"/><path class="flow-line" d="M300 300 C215 377 186 424 121 478"/><path class="flow-line" d="M300 300 C386 367 425 414 495 477"/>
+            <circle class="travel-dot" r="4"><animateMotion dur="5.2s" repeatCount="indefinite" path="M300 300 C225 226 187 189 116 123"/></circle><circle class="travel-dot travel-two" r="4"><animateMotion dur="6.1s" begin="-2s" repeatCount="indefinite" path="M300 300 C389 228 423 204 494 143"/></circle><circle class="travel-dot travel-three" r="4"><animateMotion dur="5.7s" begin="-3s" repeatCount="indefinite" path="M300 300 C215 377 186 424 121 478"/></circle><circle class="travel-dot travel-four" r="4"><animateMotion dur="6.5s" begin="-1s" repeatCount="indefinite" path="M300 300 C386 367 425 414 495 477"/></circle>
+            <circle class="node-ring" cx="300" cy="300" r="97"/>
+            <circle class="small-node" cx="116" cy="123" r="44"/><circle class="small-node" cx="494" cy="143" r="44"/><circle class="small-node" cx="121" cy="478" r="44"/><circle class="small-node" cx="495" cy="477" r="44"/>
+            <circle class="pulse-node" cx="300" cy="300" r="65"/>
+            <text x="300" y="293" text-anchor="middle" class="svg-main">AGENT</text><text x="300" y="316" text-anchor="middle" class="svg-sub">COORDINATOR</text>
+            <text x="116" y="128" text-anchor="middle" class="svg-label">PLAN</text><text x="494" y="148" text-anchor="middle" class="svg-label">ACT</text><text x="121" y="483" text-anchor="middle" class="svg-label">VERIFY</text><text x="495" y="482" text-anchor="middle" class="svg-label">MEMORY</text>
+          </svg>
+          <div class="float-tag tag-one" aria-hidden="true"><span>01 / PLAN</span><i></i></div><div class="float-tag tag-two" aria-hidden="true"><span>02 / EXECUTE</span><i></i></div><div class="float-tag tag-three" aria-hidden="true"><span>03 / VERIFY</span><i></i></div>
+          <div class="visual-caption"><span class="caption-cross">✳</span> THE SYSTEM UNDER STUDY <span class="caption-id">FIG. 01</span></div>
+        </div>
+      </div>
+      <div class="hero-bottom"><span>SCROLL TO INVESTIGATE</span><span class="scroll-mark">↓</span><span>05 SEP 2026 / PROJECT SYNOPSIS</span></div>
+    </section>
+
+    <div class="ticker" aria-label="Research themes"><div class="ticker-track"><span>Same tasks</span><b>✳</b><span>Two architectures</span><b>✳</b><span>Measured reliability</span><b>✳</b><span>Component ablation</span><b>✳</b><span>Same tasks</span><b>✳</b><span>Two architectures</span><b>✳</b><span>Measured reliability</span><b>✳</b><span>Component ablation</span><b>✳</b></div></div>
+
+    <section class="section question" id="question" aria-labelledby="question-title">
+      <div class="section-rail reveal"><span>01 / THE QUESTION</span><span>THE PROBLEM</span></div>
+      <div class="question-layout">
+        <div class="question-lead reveal"><h2 id="question-title">Tools are connected.<br><em>Work is not.</em></h2><p>Knowledge workers move between email, calendars, chat, issues, and documents. MCP gives an agent access to those tools. The harder question is whether one agent can coordinate a long chain of dependent decisions reliably.</p></div>
+        <div class="question-aside reveal delay-1"><div class="index-mark">?</div><p>When a task crosses several systems, does a planner, a specialist team, memory, and verification improve the outcome enough to justify their complexity?</p><span>RESEARCH QUESTION / 001</span></div>
+      </div>
+      <div class="architecture-head reveal"><p>THE TWO SYSTEMS</p><p>ONE DOMAIN. ONE TASK SET. TWO WAYS TO THINK.</p></div>
+      <div class="architecture-grid">
+        <article class="architecture-card baseline reveal"><div class="architecture-top"><span>A / BASELINE</span><span>01 AGENT</span></div><div class="architecture-art single-art"><div class="single-core">AGENT</div><span class="tool tool-a">EMAIL</span><span class="tool tool-b">CALENDAR</span><span class="tool tool-c">DOCS</span><span class="tool tool-d">ISSUES</span><i class="beam beam-a"></i><i class="beam beam-b"></i><i class="beam beam-c"></i><i class="beam beam-d"></i></div><h3>Single agent<br><em>+ MCP</em></h3><p>One agent plans, calls tools, remembers context, and checks its own work.</p><div class="architecture-foot">DIRECT ACCESS <span>↗</span></div></article>
+        <article class="architecture-card hierarchy reveal delay-1"><div class="architecture-top"><span>B / AGENTOS</span><span>COORDINATED TEAM</span></div><div class="architecture-art team-art"><div class="team-core">PLAN</div><span class="team-child child-a">ACT</span><span class="team-child child-b">ACT</span><span class="team-child child-c">CHECK</span><span class="team-child child-d">MEMORY</span><i class="team-stem"></i></div><h3>Hierarchical<br><em>AgentOS</em></h3><p>A planner delegates work to specialists, tracks state, and asks a verifier to inspect the result.</p><div class="architecture-foot">GOVERNED FLOW <span>↗</span></div></article>
+      </div>
+    </section>
+
+    <section class="lab section" id="lab" aria-labelledby="lab-title">
+      <div class="section-rail reveal"><span>02 / THE LAB</span><span>INTERACTIVE MODEL</span></div>
+      <div class="lab-intro reveal"><div><p class="eyebrow">Explore the mechanics</p><h2 id="lab-title">Run the<br><em>same work</em> twice.</h2></div><p>Choose a workflow, switch architectures, and step through a transparent illustration of how the work could unfold. This is a teaching model, not an empirical result.</p></div>
+      <div class="lab-shell reveal">
+        <div class="lab-toolbar"><div class="toolbar-title"><span class="live-dot"></span><strong>WORKFLOW SIMULATOR</strong><small>ILLUSTRATIVE / NO LIVE TOOL CALLS</small></div><button class="reset-button" id="reset-run" type="button">RESET ↺</button></div>
+        <div class="scenario-row"><span class="control-label">01 / SELECT WORKFLOW</span><div class="scenario-options" role="group" aria-label="Choose workflow"><button type="button" class="scenario-button active" data-scenario="onboarding" aria-pressed="true">New hire onboarding <span>↗</span></button><button type="button" class="scenario-button" data-scenario="incident" aria-pressed="false">Incident response <span>↗</span></button><button type="button" class="scenario-button" data-scenario="review" aria-pressed="false">Quarterly review <span>↗</span></button></div></div>
+        <div class="mode-row"><span class="control-label">02 / CHOOSE ARCHITECTURE</span><div class="mode-switch" role="group" aria-label="Choose architecture"><button type="button" class="mode-button active" data-mode="single" aria-pressed="true"><span class="mode-icon">●</span> Single agent + MCP</button><button type="button" class="mode-button" data-mode="team" aria-pressed="false"><span class="mode-icon">✳</span> Hierarchical AgentOS</button></div></div>
+        <div class="lab-stage"><div class="stage-main"><div class="stage-heading"><span id="scenario-tag">HR / CROSS-TOOL</span><span id="stage-counter">STEP 00 / 05</span></div><div class="stage-prompt"><span class="prompt-quote">“</span><p id="scenario-prompt">Prepare everything for a new teammate’s first day: account access, welcome message, calendar, and onboarding documents.</p></div><div class="flow-rail" id="flow-rail" aria-label="Interactive workflow steps"><div class="flow-rail-head"><span>SIGNAL PATH / SELECT A STEP</span><span id="flow-status">STANDBY</span></div><div class="flow-track" id="flow-track"></div></div><div class="stage-stream" id="stage-stream" aria-live="polite"><div class="idle-state"><span class="idle-glyph">◎</span><strong>Ready to trace this workflow.</strong><span>Start the run to see how the selected architecture handles each dependency.</span></div></div><div class="stage-controls"><button id="run-button" class="run-button" type="button">Run simulation <span>↗</span></button><button id="step-button" class="step-button" type="button">Next step <span>→</span></button><span class="control-hint">SPACE TO ADVANCE</span></div></div><aside class="stage-side"><div class="side-label">LIVE TRACE / ILLUSTRATIVE</div><div class="signal-art" aria-hidden="true"><span class="signal-ring ring-1"></span><span class="signal-ring ring-2"></span><span class="signal-ring ring-3"></span><span class="signal-center">AI</span><span class="signal-orbit"></span></div><div class="metric"><span>Steps completed</span><strong id="metric-steps">00 <small>/ 05</small></strong></div><div class="metric"><span>Active roles</span><strong id="metric-roles">01</strong></div><div class="metric"><span>Verification gates</span><strong id="metric-gates">00</strong></div><div class="trace-note" id="trace-note"><span>ANALYST NOTE</span><p>Watch where responsibility moves, and where a missing check could let an error travel downstream.</p></div><div class="legend"><span><i class="legend-action"></i> ACTION</span><span><i class="legend-check"></i> CHECK</span><span><i class="legend-risk"></i> RISK</span></div></aside></div>
+      </div>
+      <div class="compare-intro reveal"><div><span class="eyebrow">A / B comparison</span><h3>Two paths.<br><em>One moment.</em></h3></div><p>Scrub both traces together to see who owns each decision at the same point in the workflow. Select a scenario above to change both paths.</p></div>
+      <div class="compare-shell reveal" aria-label="Synchronized architecture comparison">
+        <div class="compare-top"><span>DUAL TRACE / <strong id="compare-scenario">NEW HIRE ONBOARDING</strong></span><span class="gesture-hint">← DRAG OR SWIPE →</span><label for="compare-step">MOMENT <output id="compare-count">01 / 06</output></label></div>
+        <input id="compare-step" class="compare-range" type="range" min="1" max="6" value="1" aria-label="Comparison moment">
+        <div class="compare-columns"><article class="compare-card"><div class="compare-card-top"><span>A / BASELINE</span><span>ONE AGENT</span></div><div class="compare-glyph single-glyph" aria-hidden="true">●</div><span class="compare-role" id="compare-single-role">AGENT</span><h4 id="compare-single-title">Read the request</h4><p id="compare-single-detail">Extract start date, manager, role, and required resources.</p><div class="compare-card-foot" id="compare-single-type">ACTION</div></article><article class="compare-card"><div class="compare-card-top"><span>B / AGENTOS</span><span>COORDINATED TEAM</span></div><div class="compare-glyph team-glyph" aria-hidden="true">✳</div><span class="compare-role" id="compare-team-role">PLANNER</span><h4 id="compare-team-title">Map the dependency chain</h4><p id="compare-team-detail">Separate access, documents, communication, and calendar work.</p><div class="compare-card-foot" id="compare-team-type">ACTION</div></article></div>
+        <div class="compare-insight"><span>WHAT TO NOTICE ↗</span><p id="compare-insight-text">Both start with the request. AgentOS makes the dependency plan explicit before any tool action.</p></div>
+      </div>
+      <p class="lab-disclaimer">The traces model possible behavior for discussion. They do not measure accuracy, speed, cost, or reliability of a deployed system.</p>
+    </section>
+
+    <section class="section method" id="method" aria-labelledby="method-title"><div class="section-rail reveal"><span>03 / THE METHOD</span><span>HOW TO FIND OUT</span></div><div class="method-intro reveal"><p class="eyebrow">Beyond the demo</p><h2 id="method-title">Make the claim<br><em>earn its place.</em></h2><p>The project calls for a comparative evaluation on the same task domain, followed by component ablation to identify what actually helps.</p></div><div class="method-list"><div class="method-item reveal"><span class="method-no">01</span><div><h3>Hold the task constant.</h3><p>Give both systems the same inputs, tools, constraints, and completion criteria.</p></div><span class="method-icon">◎</span></div><div class="method-item reveal"><span class="method-no">02</span><div><h3>Measure the whole outcome.</h3><p>Record task completion, errors, recovery, latency, and the coordination overhead of each design.</p></div><span class="method-icon">↗</span></div><div class="method-item reveal"><span class="method-no">03</span><div><h3>Remove one part at a time.</h3><p>Ablate planning, memory, verification, and governance to see which pieces affect reliability.</p></div><span class="method-icon">✳</span></div></div>
+      <div class="ablation reveal"><div class="ablation-heading"><span class="eyebrow">Component ablation / conceptual</span><h3>What changes when<br><em>one layer disappears?</em></h3><p>Select a configuration. The note describes what an experiment should test; it does not predict a measured outcome.</p></div><div class="ablation-body"><div class="ablation-options" role="group" aria-label="Choose AgentOS configuration"><button type="button" class="ablation-button active" data-ablation="full" aria-pressed="true"><span>00</span> Full system <b>↗</b></button><button type="button" class="ablation-button" data-ablation="planning" aria-pressed="false"><span>01</span> Without planning <b>↗</b></button><button type="button" class="ablation-button" data-ablation="memory" aria-pressed="false"><span>02</span> Without memory <b>↗</b></button><button type="button" class="ablation-button" data-ablation="verification" aria-pressed="false"><span>03</span> Without verification <b>↗</b></button><button type="button" class="ablation-button" data-ablation="governance" aria-pressed="false"><span>04</span> Without governance <b>↗</b></button></div><div class="ablation-result"><div class="ablation-nodes" aria-label="Selected AgentOS components"><span data-component="planning">PLAN</span><span data-component="memory">MEMORY</span><span data-component="verification">VERIFY</span><span data-component="governance">GOVERN</span></div><span class="ablation-kicker">TESTABLE QUESTION</span><h4 id="ablation-title">Does the complete hierarchy help?</h4><p id="ablation-description">Compare the full AgentOS system with the single-agent baseline on the same tasks, then remove one component at a time to isolate its contribution.</p><span class="ablation-caveat">HYPOTHESIS EXPLORER · NOT AN EXPERIMENTAL RESULT</span></div></div></div>
+    </section>
+
+    <section class="section live-system" id="live" aria-labelledby="live-title">
+      <div class="section-rail reveal"><span>04 / LIVE SYSTEM</span><span>CONNECTED TO AGENTOS</span></div>
+      <div class="live-intro reveal"><div><p class="eyebrow">Beyond the illustration</p><h2 id="live-title">Now, talk to<br><em>the real system.</em></h2></div><p>The simulator above is a teaching model. This workspace reads your running AgentOS backend and streams real agent responses when opened at <code>/app/</code>.</p></div>
+      <div class="live-topbar"><span><i class="live-led" id="backend-led"></i><strong id="backend-state">CONNECTING TO LOCAL AGENTOS</strong></span><span id="backend-workspace">WORKSPACE / —</span><button type="button" id="backend-refresh">REFRESH ↻</button></div>
+      <div class="live-metrics" aria-label="Live workspace metrics"><div><span>01 / MISSIONS</span><strong id="live-missions">—</strong><small>Recorded workflows</small></div><div><span>02 / ACTIVE</span><strong id="live-active">—</strong><small>Runs in motion</small></div><div><span>03 / APPROVALS</span><strong id="live-approvals">—</strong><small>Awaiting human review</small></div><div><span>04 / ARTIFACTS</span><strong id="live-artifacts">—</strong><small>Traceable outputs</small></div></div>
+      <div class="live-grid">
+        <div class="live-feed">
+          <div class="live-panel-head">
+            <div>
+              <span class="eyebrow">THE RUNNING WORKSPACE</span>
+              <h3 id="live-feed-title">Agent Execution</h3>
+            </div>
+            <div class="feed-tabs" role="tablist">
+              <button type="button" class="feed-tab active" id="tab-trace-btn" role="tab" aria-selected="true" aria-controls="live-trace-panel">
+                <span class="feed-tab-led"></span>
+                <span>LIVE TOOLS &amp; ACTIONS</span>
+                <span class="feed-tab-count" id="live-feed-count">00</span>
+              </button>
+              <button type="button" class="feed-tab" id="tab-missions-btn" role="tab" aria-selected="false" aria-controls="live-mission-panel">
+                <span>MISSIONS</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Execution Status Bar -->
+          <div class="feed-status-bar" id="feed-status-bar">
+            <div class="feed-status-main">
+              <i class="status-pulse-dot" id="feed-status-dot"></i>
+              <span id="feed-status-label">LLM Engine Ready · Waiting for task</span>
+            </div>
+            <div class="feed-status-meta">
+              <span><i class="meta-icon">⚙</i> Tools: <strong id="feed-meta-tools">0</strong></span>
+              <span><i class="meta-icon">⚡</i> Steps: <strong id="feed-meta-steps">0</strong></span>
+              <span><i class="meta-icon">🤖</i> Role: <strong id="feed-meta-role">ARCHITECT</strong></span>
+            </div>
+          </div>
+
+          <!-- Panel 1: Live Trace & Working Area (Default Visible) -->
+          <div id="live-trace-panel" class="live-trace-panel" role="tabpanel">
+            <div class="trace-feed-container" id="trace-feed-container">
+              <!-- When empty, show rich interactive agent architecture readiness -->
+              <div class="trace-empty-guide" id="trace-empty-guide">
+                <div class="guide-pipeline">
+                  <div class="pipe-step active">
+                    <span class="pipe-num">01</span>
+                    <span class="pipe-label">Prompt</span>
+                  </div>
+                  <span class="pipe-arrow">➔</span>
+                  <div class="pipe-step">
+                    <span class="pipe-num">02</span>
+                    <span class="pipe-label">Reasoning</span>
+                  </div>
+                  <span class="pipe-arrow">➔</span>
+                  <div class="pipe-step">
+                    <span class="pipe-num">03</span>
+                    <span class="pipe-label">Tool Execution</span>
+                  </div>
+                  <span class="pipe-arrow">➔</span>
+                  <div class="pipe-step">
+                    <span class="pipe-num">04</span>
+                    <span class="pipe-label">Verification</span>
+                  </div>
+                </div>
+
+                <div class="guide-capabilities">
+                  <div class="guide-cap-item">
+                    <span class="cap-badge">FILESYSTEM</span>
+                    <p>Read, write, search, and patch files in the workspace with safety controls.</p>
+                  </div>
+                  <div class="guide-cap-item">
+                    <span class="cap-badge">TERMINAL</span>
+                    <p>Execute PowerShell, Python runners, unit tests and system monitors.</p>
+                  </div>
+                  <div class="guide-cap-item">
+                    <span class="cap-badge">WEB SEARCH</span>
+                    <p>Live search &amp; real-time external documentation lookup.</p>
+                  </div>
+                </div>
+
+                <div class="guide-cta-note">
+                  <span class="sparkle">✳</span>
+                  <span>Select a <strong>Smart Suggestion</strong> on the right or enter a prompt to watch live reasoning, tool calls, and file actions execute step-by-step here.</span>
+                </div>
+              </div>
+
+              <!-- When tool calls/thoughts occur, they are appended here -->
+              <div class="trace-timeline-list" id="trace-timeline-list"></div>
+            </div>
+          </div>
+
+          <!-- Panel 2: Missions List (Toggled via tab) -->
+          <div id="live-mission-panel" class="live-mission-panel" role="tabpanel" hidden>
+            <div id="live-mission-list" class="live-mission-list">
+              <div class="live-empty">Waiting for the backend signal…</div>
+            </div>
+          </div>
+
+          <div class="live-agent-strip">
+            <span>AGENT ACTIVITY</span>
+            <div id="live-agent-list">—</div>
+          </div>
+        </div>
+        <div class="live-console"><div class="live-panel-head"><div><span class="eyebrow">HUMAN + MACHINE</span><h3>Agent console</h3></div><span class="console-spark">✳</span></div>
+          <div class="live-console-controls"><label>ENGINE <select id="live-engine"><option value="groq">Groq cloud</option><option value="ollama">Ollama local</option></select></label><label>ROLE <select id="live-role"><option value="auto">Auto router</option><option value="grocery_chef">🛒 Grocery &amp; Blinkit Chef</option><option value="project_architect">Project architect</option><option value="file_engineer">File engineer</option><option value="system_operator">System operator</option><option value="web_researcher">Web researcher</option><option value="verifier">Verifier</option></select></label><label id="live-model-wrap" hidden>MODEL <select id="live-model"></select></label></div>
+          <div class="live-session-row"><label for="live-session">CONVERSATION</label><select id="live-session" aria-label="Saved conversations"></select><button type="button" id="live-new-session">+ NEW</button></div>
+          <div class="live-chat-stream" id="live-chat-stream" role="log" aria-live="polite"><div class="chat-welcome"><span>✳</span><strong>Give the system a direction.</strong><p>Ask a question, describe a task, or use your voice. Responses stream from the local backend.</p></div></div>
+          <div class="live-trace" id="live-trace" hidden><button type="button" id="live-trace-toggle" aria-expanded="false">EXECUTION TRACE <span id="live-trace-count">00</span> ↗</button><div id="live-trace-events" hidden></div></div>
+          <div class="smart-suggestions-bar" id="smart-suggestions-bar">
+            <div class="sugg-header">
+              <div class="sugg-header-left">
+                <span class="sugg-icon">💡</span>
+                <span class="sugg-title">SMART PROMPT SUGGESTIONS</span>
+                <span class="sugg-role-pill" id="sugg-role-pill">PROJECT ARCHITECT</span>
+              </div>
+              <button type="button" class="sugg-refresh-btn" id="sugg-refresh-btn" title="Shuffle suggestions">↻ SHUFFLE</button>
+            </div>
+            <div class="sugg-chips-wrap" id="sugg-chips-wrap"></div>
+          </div>
+          <form id="live-chat-form" class="live-chat-form">
+            <label class="sr-only" for="live-prompt">Message AgentOS</label>
+            <textarea id="live-prompt" rows="2" placeholder="What should we work on?"></textarea>
+
+            <!-- Dedicated 3-Input Meal Planner (Visible only when Blinkit Chef is active) -->
+            <div id="grocery-inputs-wrap" class="grocery-inputs-wrap" hidden>
+              <div class="grocery-header-bar">
+                <div class="grocery-header-left">
+                  <span class="grocery-badge">🟢 BLINKIT CHEF</span>
+                  <span class="grocery-sub">Select dishes or click suggestions — groceries are prepared for instant cart checkout</span>
+                </div>
+                <div class="grocery-header-right">
+                  <button type="button" class="grocery-clear-btn" id="grocery-clear-btn" title="Clear all meal boxes">✕ CLEAR ALL</button>
+                </div>
+              </div>
+              <div class="grocery-boxes-grid">
+                <!-- Breakfast Box -->
+                <div class="grocery-box meal-box-breakfast">
+                  <div class="grocery-box-label">
+                    <span class="meal-icon-wrap">🍳</span>
+                    <span>BREAKFAST</span>
+                  </div>
+                  <input type="text" id="grocery-breakfast" class="grocery-box-input" placeholder="e.g. Poha, Aloo Paratha, Omelette..." autocomplete="off">
+                  <div class="meal-quick-chips" data-target="grocery-breakfast">
+                    <span class="chips-label">Popular dishes:</span>
+                    <div class="chips-pills-wrap">
+                      <button type="button" class="meal-pill" data-food="Poha">Poha 🍳</button>
+                      <button type="button" class="meal-pill" data-food="Aloo Paratha with Curd">Aloo Paratha 🫓</button>
+                      <button type="button" class="meal-pill" data-food="Bread Omelette">Omelette 🥪</button>
+                      <button type="button" class="meal-pill" data-food="Idli Sambar">Idli 🥥</button>
+                      <button type="button" class="meal-pill" data-food="Oats with Milk & Banana">Oats 🥣</button>
+                      <button type="button" class="meal-pill" data-food="Besan Chilla">Besan Chilla 🥞</button>
+                      <button type="button" class="meal-pill" data-food="Upma">Upma 🌾</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Lunch Box -->
+                <div class="grocery-box meal-box-lunch">
+                  <div class="grocery-box-label">
+                    <span class="meal-icon-wrap">🍲</span>
+                    <span>LUNCH</span>
+                  </div>
+                  <input type="text" id="grocery-lunch" class="grocery-box-input" placeholder="e.g. Paneer Butter Masala, Dal, Roti..." autocomplete="off">
+                  <div class="meal-quick-chips" data-target="grocery-lunch">
+                    <span class="chips-label">Popular dishes:</span>
+                    <div class="chips-pills-wrap">
+                      <button type="button" class="meal-pill" data-food="Paneer Butter Masala with Roti">Paneer Masala 🧀</button>
+                      <button type="button" class="meal-pill" data-food="Dal Tadka & Steamed Rice">Dal Rice 🍲</button>
+                      <button type="button" class="meal-pill" data-food="Rajma Chawal with Salad">Rajma Chawal 🍛</button>
+                      <button type="button" class="meal-pill" data-food="Aloo Gobi & Roti">Aloo Gobi 🥔</button>
+                      <button type="button" class="meal-pill" data-food="Chole Bhature">Chole Bhature 🥘</button>
+                      <button type="button" class="meal-pill" data-food="Veg Biryani with Raita">Veg Biryani 🍚</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Dinner Box -->
+                <div class="grocery-box meal-box-dinner">
+                  <div class="grocery-box-label">
+                    <span class="meal-icon-wrap">🍛</span>
+                    <span>DINNER</span>
+                  </div>
+                  <input type="text" id="grocery-dinner" class="grocery-box-input" placeholder="e.g. Moong Dal Khichdi, Salad..." autocomplete="off">
+                  <div class="meal-quick-chips" data-target="grocery-dinner">
+                    <span class="chips-label">Popular dishes:</span>
+                    <div class="chips-pills-wrap">
+                      <button type="button" class="meal-pill" data-food="Moong Dal Khichdi and Curd">Khichdi 🍚</button>
+                      <button type="button" class="meal-pill" data-food="Matar Paneer with Roti">Matar Paneer 🍛</button>
+                      <button type="button" class="meal-pill" data-food="Mix Veg & Chapati">Mix Veg 🥗</button>
+                      <button type="button" class="meal-pill" data-food="Paneer Bhurji with Roti">Bhurji 🥘</button>
+                      <button type="button" class="meal-pill" data-food="Palak Paneer with Roti">Palak Paneer 🥬</button>
+                      <button type="button" class="meal-pill" data-food="Egg Curry with Steamed Rice">Egg Curry 🥚</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="grocery-policy-note">
+                <span>⚡ Fill any dish. Our AI chef extracts ingredients and opens Blinkit in Chrome with your cart ready!</span>
+              </div>
+            </div>
+
+            <button type="button" id="live-mic" aria-label="Speak your message">🎙</button>
+            <button type="submit" id="live-send">SEND ↗</button>
+          </form>
+          <div class="live-console-foot"><span id="live-chat-status" role="status">Ready when you are.</span><button type="button" id="live-watchers-toggle" aria-expanded="false">WATCHERS <span id="live-watcher-count">00</span> ↗</button></div>
+          <div class="live-watchers" id="live-watchers" hidden><div id="live-watcher-list"></div><form id="live-watcher-form"><input id="live-watcher-name" type="text" placeholder="Watcher name" aria-label="Watcher name" required><input id="live-watcher-command" type="text" placeholder="Command to run" aria-label="Watcher command" required><input id="live-watcher-interval" type="number" min="10" value="180" aria-label="Interval in seconds"><button type="submit">ADD WATCHER +</button></form></div>
+        </div>
+      </div>
+      <p class="live-disclaimer">Live actions use the backend's existing permissions and approval rules. The research simulator remains separate from these real operations.</p>
+    </section>
+
+    <!-- 3D Dish Validation Error Modal -->
+    <div id="dish-error-modal" class="dish-error-modal" hidden role="dialog" aria-modal="true" aria-labelledby="dish-error-title">
+      <div class="dish-error-backdrop" id="dish-error-backdrop"></div>
+      <div class="dish-error-card">
+        <div class="dish-error-glow"></div>
+        <div class="dish-error-icon">🚫</div>
+        <h3 class="dish-error-title" id="dish-error-title">Inedible / Invalid Dish Detected</h3>
+        <p class="dish-error-desc" id="dish-error-desc">
+          The entered item <strong class="dish-error-highlight" id="dish-error-item">"car"</strong> does not match any known edible food dish!
+        </p>
+        <div class="dish-error-tip">
+          <span class="tip-spark">💡</span>
+          <span>Please enter real, edible food dishes (e.g. <em>Poha, Aloo Paratha, Dal Tadka, Paneer Butter Masala, Khichdi, Salad</em>) so Blinkit can prepare your grocery cart.</span>
+        </div>
+        <button type="button" class="dish-error-btn" id="dish-error-close">OK, I WILL FIX IT ➔</button>
+      </div>
+    </div>
+    <section class="closing"><div class="closing-overline reveal"><span>AGENTOS / BRB 90</span><span>THE NEXT QUESTION IS EMPIRICAL</span></div><h2 class="reveal">Better coordination<br>is a <em>hypothesis.</em><br><span>Let’s test it.</span></h2><div class="closing-bottom reveal"><p>A comparative study of single-agent MCP and hierarchical multi-agent orchestration for enterprise workflow automation.</p><a href="#lab" class="circle-link" aria-label="Return to interactive lab">↗</a></div></section>
+  </main>
+  <footer class="footer"><span>© 2026 AGENTOS / BRB 90</span><span>GLA UNIVERSITY · B.TECH CSE</span><a href="#top">BACK TO TOP ↑</a></footer>
+  <div class="cursor-orb" id="cursor-orb" aria-hidden="true"><span></span></div>
+  <button class="motion-toggle" id="motion-toggle" type="button" aria-pressed="true" aria-label="Pause decorative motion"><span class="motion-toggle-dot"></span><span id="motion-toggle-text">MOTION ON</span></button>
+  <script src="script.js"></script>
+  <script src="motion.js"></script>
+  <script src="human.js"></script>
+  <script src="backend.js"></script>
+  <script src="creature.js"></script>
+</body>
+</html>

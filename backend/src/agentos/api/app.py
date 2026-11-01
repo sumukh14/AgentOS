@@ -1,0 +1,1075 @@
+"""Local discovery and mission API. Remote access is not supported."""
+
+import os
+from collections.abc import Awaitable, Callable
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from jsonschema.exceptions import ValidationError as SchemaValidationError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from agentos.adapters.artifacts import ArtifactStore
+from agentos.adapters.creator import CREATOR_DEMO_GOAL, CreatorDemoGenerator, CreatorExecutor
+from agentos.adapters.demo import (
+    DEMO_GOAL,
+    DEMO_LABEL,
+    DemoDeveloperExecutor,
+    DemoGenerator,
+    demo_directory,
+    demo_workspace,
+)
+from agentos.adapters.developer import DeveloperExecutor, register_local_tools
+from agentos.adapters.embeddings import EmbeddingSettings, OllamaEmbeddings
+from agentos.adapters.local_tools import LocalWorkspaceTools
+from agentos.adapters.manifests import load_registry
+from agentos.adapters.memory_index import MemoryIndexStore
+from agentos.adapters.memory_sources import MemoryCorpus
+from agentos.adapters.ollama import create_model_executor
+from agentos.adapters.planning import (
+    StructuredCreatorPlanner,
+    StructuredDeveloperPlanner,
+    StructuredStudentPlanner,
+)
+from agentos.adapters.provider import ModelSettings, ProviderFailure, ResponsesExecutor
+from agentos.adapters.sqlite import SQLiteMissionRepository
+from agentos.adapters.student import STUDENT_DEMO_GOAL, StudentDemoGenerator, StudentExecutor
+from agentos.adapters.workspace import WorkspaceStore
+from agentos.domain.agents import AgentDefinition, AgentExecutor, StructuredGenerator
+from agentos.domain.artifacts import Artifact
+from agentos.domain.base import Identifier
+from agentos.domain.governance import (
+    Approval,
+    ApprovalDecision,
+    PermissionDenied,
+    RecoveryRequest,
+    RunClaim,
+    UserRole,
+    require_operator,
+)
+from agentos.domain.memory import Embedder, MemoryRebuild, MemoryResults, MemorySearch
+from agentos.domain.missions import (
+    Mission,
+    MissionCreate,
+    MissionEvent,
+    MissionNotFound,
+    MissionStatus,
+    MissionValidationError,
+    PatchRevisionRequest,
+    StateConflict,
+    TaskAction,
+    TaskActionRequest,
+    VersionRequest,
+)
+from agentos.domain.overview import WorkspaceOverview
+from agentos.domain.revisions import PatchRevisionStatus
+from agentos.domain.roles import RolePackage
+from agentos.domain.workspace import (
+    CreatorMissionCreate,
+    DeveloperMissionCreate,
+    MemoryCreate,
+    MemoryNote,
+    StudentMissionCreate,
+    WorkspaceSettings,
+)
+from agentos.services.approvals import ApprovalService
+from agentos.services.creator import creator_mission, has_sources
+from agentos.services.creator_planning import (
+    CreatorPlanner,
+    compile_creator_plan,
+    creator_kind,
+    registered_creator_planner,
+    validate_creator_plan,
+)
+from agentos.services.developer import developer_mission
+from agentos.services.execution import ExecutorRegistry
+from agentos.services.memory import SemanticMemory
+from agentos.services.missions import MissionService
+from agentos.services.orchestration import Orchestrator
+from agentos.services.overview import workspace_overview
+from agentos.services.planning import (
+    DeveloperPlanner,
+    compile_plan,
+    developer_kind,
+    registered_planner,
+    validate_planned_mission,
+)
+from agentos.services.registry import AgentRegistry
+from agentos.services.revisions import PatchRevisionService
+from agentos.services.student import has_study_plan, student_mission
+from agentos.services.student_planning import (
+    StudentPlanner,
+    compile_student_plan,
+    registered_student_planner,
+    student_kind,
+    validate_student_plan,
+)
+from agentos.services.tools import ToolRegistry
+
+
+def create_app(
+    registry: AgentRegistry | None = None,
+    *,
+    package_root: Path | None = None,
+    db_path: Path | None = None,
+    artifact_root: Path | None = None,
+    executors: ExecutorRegistry | None = None,
+    user_role: UserRole | None = None,
+    workspace: WorkspaceSettings | None = None,
+    model: ResponsesExecutor | None = None,
+    frontend_root: Path | None = None,
+    demo_root: Path | None = None,
+    desktop_session: str | None = None,
+    planner: DeveloperPlanner | None = None,
+    creator_planner: CreatorPlanner | None = None,
+    student_planner: StudentPlanner | None = None,
+    embedder: Embedder | None = None,
+) -> FastAPI:
+    if demo_root is not None:
+        if any(
+            item is not None
+            for item in (
+                registry,
+                workspace,
+                model,
+                executors,
+                db_path,
+                artifact_root,
+                package_root,
+                frontend_root,
+                planner,
+                creator_planner,
+                student_planner,
+                embedder,
+            )
+        ):
+            raise ValueError("Demo mode uses its own isolated startup configuration")
+        demo_root = demo_root.resolve(strict=True)
+        workspace = demo_workspace(demo_root)
+        directory = demo_directory(demo_root)
+        db_path = directory / "agentos.sqlite3"
+        artifact_root = directory / "artifacts"
+        package_root = demo_root / "packages"
+        frontend_root = demo_root / "frontend" / "dist"
+    if registry is None:
+        root = package_root or Path(os.environ.get("AGENTOS_PACKAGES", "packages"))
+        registry = load_registry(root)
+    catalog = registry
+    repository = SQLiteMissionRepository(
+        db_path or Path(os.environ.get("AGENTOS_DATABASE", ".agentos/agentos.sqlite3"))
+    )
+    missions = MissionService(catalog, repository)
+    role = user_role or UserRole(os.environ.get("AGENTOS_USER_ROLE", "operator"))
+    storage = ArtifactStore(
+        artifact_root
+        or Path(os.environ.get("AGENTOS_ARTIFACTS", str(repository.path.parent / "artifacts")))
+    )
+    memory = WorkspaceStore(repository.path.parent / "workspace.sqlite3")
+    embedding_error = None
+    if demo_root is None and embedder is None:
+        try:
+            embedding_settings = EmbeddingSettings.from_environment()
+            if embedding_settings is not None:
+                embedder = OllamaEmbeddings(embedding_settings)
+        except ValueError:
+            embedding_error = "Local embedding configuration is invalid"
+    semantic_memory = SemanticMemory(
+        MemoryIndexStore(memory.path), MemoryCorpus(memory, repository, storage), embedder
+    )
+    configuration = Path(os.environ.get("AGENTOS_WORKSPACE_CONFIG", ".agentos/workspace.json"))
+    workspace_error: str | None = None
+    if demo_root is None and workspace is None and configuration.exists():
+        try:
+            workspace = WorkspaceSettings.model_validate_json(
+                configuration.read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            workspace_error = "Developer workspace configuration is invalid; check workspace.json."
+    settings = ModelSettings.from_environment() if demo_root is None and model is None else None
+    if settings is not None:
+        if settings.generation_authorized() and settings.live_limits_ready():
+            model = create_model_executor(settings)
+    bindings = executors or ExecutorRegistry()
+    generator: StructuredGenerator | None = DemoGenerator() if demo_root is not None else model
+    if executors is None and workspace is not None and generator is not None:
+        tools = ToolRegistry(repository.record_tool_event)
+        register_local_tools(
+            tools, LocalWorkspaceTools(workspace, memory, repository.path.parent / "scratch")
+        )
+        scoped = DeveloperExecutor(generator, tools, memory, role)
+        developer: AgentExecutor = (
+            DemoDeveloperExecutor(scoped) if demo_root is not None else scoped
+        )
+        for candidate in catalog.role_agents("developer"):
+            try:
+                developer_kind(candidate)
+            except MissionValidationError:
+                continue
+            bindings.register_agent(candidate.id, developer)
+    if planner is None and demo_root is None and generator is not None and workspace is not None:
+        planner = StructuredDeveloperPlanner(generator, catalog, workspace)
+    if creator_planner is None and demo_root is None and generator is not None:
+        creator_planner = StructuredCreatorPlanner(generator, catalog)
+    if student_planner is None and demo_root is None and generator is not None:
+        student_planner = StructuredStudentPlanner(generator, catalog)
+    if executors is None and generator is not None:
+        creator = CreatorExecutor(
+            CreatorDemoGenerator() if demo_root is not None else generator,
+            demo=demo_root is not None,
+        )
+        for candidate in catalog.agents():
+            if candidate.role != "creator":
+                continue
+            try:
+                creator_kind(candidate, legacy=True)
+            except StateConflict:
+                continue
+            bindings.register_agent(candidate.id, creator)
+        student = StudentExecutor(
+            StudentDemoGenerator() if demo_root is not None else generator,
+            demo=demo_root is not None,
+        )
+        for candidate in catalog.agents():
+            if candidate.role != "student":
+                continue
+            try:
+                student_kind(candidate, legacy=True)
+            except StateConflict:
+                if demo_root is None:
+                    from agentos.adapters.student_sources import StudentSourceExecutor
+                    from agentos.services.student_sources import source_kind
+
+                    try:
+                        source_kind(candidate)
+                    except StateConflict:
+                        continue
+                    bindings.register_agent(candidate.id, StudentSourceExecutor(generator))
+                continue
+            bindings.register_agent(candidate.id, student)
+
+    def workflow_status() -> list[dict[str, object]]:
+        result: list[dict[str, object]] = []
+        for role_id, agents, steps, notice, goal in (
+            (
+                "developer",
+                ("investigation", "code_helper", "testing"),
+                (
+                    "Investigate → propose a patch → run tests → human review"
+                    if demo_root is not None
+                    else "Baseline + investigation → local issue → patch → tests → human review"
+                ),
+                "Selected source files and relevant notes are sent to the configured model.",
+                DEMO_GOAL,
+            ),
+            (
+                "creator",
+                ("creator_outline", "creator_script"),
+                "Brief → outline → script → human review",
+                "Only the supplied brief and outline are sent to the configured model.",
+                CREATOR_DEMO_GOAL,
+            ),
+            (
+                "student",
+                ("student_notes", "student_quiz"),
+                "Study brief → notes → quiz and answer key → human review",
+                "Only the supplied study brief and notes are sent to the configured model.",
+                STUDENT_DEMO_GOAL,
+            ),
+        ):
+            try:
+                package = catalog.role(role_id)
+            except KeyError:
+                continue
+            reason = ""
+            if generator is None:
+                reason = (
+                    "Model execution is unavailable. A selected model needs separate "
+                    "authorization and a valid request policy/ledger. Local Ollama needs no "
+                    "API key; enabling local execution does not authorize cloud calls."
+                )
+            elif role_id == "developer" and workspace is None:
+                reason = workspace_error or "Configure selected source files and test commands."
+            else:
+                try:
+                    if role_id == "developer" and demo_root is None:
+                        registered_planner(catalog)
+                        kinds = set()
+                        for candidate in catalog.role_agents("developer"):
+                            if candidate.capability == "developer_plan":
+                                continue
+                            try:
+                                kind = developer_kind(candidate)
+                            except MissionValidationError:
+                                continue
+                            bindings.resolve(candidate)
+                            kinds.add(kind)
+                        if (
+                            kinds
+                            != {
+                                "developer_investigate",
+                                "developer_patch",
+                                "developer_test",
+                                "developer_baseline",
+                                "developer_issue",
+                            }
+                            or planner is None
+                        ):
+                            raise StateConflict("Developer planning capabilities are unavailable")
+                    elif role_id == "creator" and demo_root is None:
+                        registered_creator_planner(catalog)
+                        creator_kinds = set()
+                        for candidate in catalog.role_agents("creator"):
+                            try:
+                                creator_capability = creator_kind(candidate)
+                                bindings.resolve(candidate)
+                            except StateConflict:
+                                continue
+                            creator_kinds.add(creator_capability)
+                        if (
+                            not {"creator_outline", "creator_script"} <= creator_kinds
+                            or creator_planner is None
+                        ):
+                            raise StateConflict("Creator planning capabilities are unavailable")
+                    elif role_id == "student" and demo_root is None:
+                        registered_student_planner(catalog)
+                        student_kinds = set()
+                        for candidate in catalog.role_agents("student"):
+                            try:
+                                capability = student_kind(candidate)
+                                bindings.resolve(candidate)
+                            except StateConflict:
+                                continue
+                            student_kinds.add(capability)
+                        if (
+                            not {"student_notes", "student_quiz"} <= student_kinds
+                            or student_planner is None
+                        ):
+                            raise StateConflict("Student planning capabilities are unavailable")
+                    else:
+                        if not set(agents) <= set(package.agents):
+                            raise StateConflict("Package is missing required workflow agents")
+                        for agent_id in agents:
+                            bindings.resolve(catalog.agent(agent_id))
+                except (KeyError, StateConflict, MissionValidationError):
+                    reason = "Required workflow agents or executors are unavailable."
+            source_research_ready = False
+            source_focus_ready = False
+            thumbnail_ready = False
+            study_planning_ready = False
+            if role_id == "student" and not reason and demo_root is None:
+                study_planning_ready = "student_focus" in student_kinds
+                from agentos.services.student_sources import source_kind, source_planner
+
+                try:
+                    source_planner(catalog)
+                    supported = set()
+                    for candidate in catalog.role_agents("student"):
+                        try:
+                            sourced_kind = source_kind(candidate)
+                            bindings.resolve(candidate)
+                        except StateConflict:
+                            continue
+                        supported.add(sourced_kind)
+                    source_research_ready = {
+                        "student_research",
+                        "student_summary",
+                        "student_source_notes",
+                        "student_source_quiz",
+                    } <= supported
+                    source_focus_ready = (
+                        source_research_ready and "student_source_focus" in supported
+                    )
+                except StateConflict:
+                    pass
+                steps = "Goal-driven plan → notes → quiz → optional study plan → human review"
+                notice = (
+                    "Your study brief, extracted constraints, task objectives, registered catalog, "
+                    "bound notes/quiz and explicit optional time settings are sent to the model."
+                )
+                if source_research_ready:
+                    steps = (
+                        "Goal-driven plan → optional source research and summary → notes → quiz "
+                        "→ optional study plan → human review"
+                    )
+                    notice = (
+                        "Your goal and supplied study sources are sent to the model. Research "
+                        "quotes and summary/quiz references are checked for provenance; "
+                        "content correctness needs human review. No websites or files are opened."
+                    )
+            if role_id == "creator" and not reason and demo_root is None:
+                source_research_ready = "creator_research" in creator_kinds
+                try:
+                    registered_creator_planner(catalog, thumbnail=True)
+                    thumbnail_ready = "creator_thumbnail" in creator_kinds
+                except StateConflict:
+                    pass
+                steps = "Goal-driven plan → outlines → script → human review"
+            if source_research_ready and role_id == "creator":
+                steps = (
+                    "Goal-driven plan → optional source research → outlines → script → human review"
+                )
+                notice = (
+                    "Only your brief and optional pasted source text are sent to the model. "
+                    "Quotes are checked for provenance; source truth and interpretations "
+                    "require review."
+                )
+            result.append(
+                {
+                    "role_id": role_id,
+                    "name": package.name,
+                    "ready": not reason,
+                    "reason": reason,
+                    "steps": steps,
+                    "context_notice": "Fixed scripted scenario. No model calls or source sharing."
+                    if demo_root is not None
+                    else notice,
+                    "demo_goal": goal if demo_root is not None else None,
+                    **(
+                        {
+                            "source_research_ready": source_research_ready,
+                            "thumbnail_ready": thumbnail_ready,
+                        }
+                        if role_id == "creator"
+                        else {}
+                    ),
+                    **(
+                        {
+                            "study_planning_ready": study_planning_ready,
+                            "source_research_ready": source_research_ready,
+                            "source_focus_ready": source_focus_ready,
+                        }
+                        if role_id == "student"
+                        else {}
+                    ),
+                }
+            )
+        return result
+
+    def require_workflow(role_id: str) -> None:
+        item = next((w for w in workflow_status() if w["role_id"] == role_id), None)
+        if item is None or not item["ready"]:
+            raise StateConflict(
+                str(item["reason"]) if item else "Workflow package is not installed"
+            )
+
+    orchestrator = Orchestrator(catalog, repository, bindings, storage)
+    approvals = ApprovalService(repository, storage)
+    revisions = PatchRevisionService(
+        catalog, repository, bindings, storage, demo=demo_root is not None
+    )
+    app = FastAPI(title="AgentOS", version="0.1.0")
+    app.add_middleware(
+        TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"]
+    )
+
+    @app.middleware("http")
+    async def local_browser_access(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        origin = request.headers.get("origin")
+        expected = f"{request.url.scheme}://{request.headers.get('host', '')}"
+        if origin is not None and origin != expected:
+            return JSONResponse(
+                status_code=403, content={"detail": "Cross-origin access is disabled"}
+            )
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and (
+            request.headers.get("content-type", "").split(";", 1)[0] != "application/json"
+        ):
+            return JSONResponse(status_code=415, content={"detail": "JSON requests are required"})
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        if request.url.path.startswith("/app"):
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+                "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+            )
+        return response
+
+    @app.exception_handler(PermissionDenied)
+    async def forbidden(request: Request, exc: PermissionDenied) -> JSONResponse:
+        return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+    @app.exception_handler(MissionNotFound)
+    async def not_found(request: Request, exc: MissionNotFound) -> JSONResponse:
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+    @app.exception_handler(StateConflict)
+    async def conflict(request: Request, exc: StateConflict) -> JSONResponse:
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+    @app.exception_handler(MissionValidationError)
+    async def invalid_mission(request: Request, exc: MissionValidationError) -> JSONResponse:
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+    @app.exception_handler(ProviderFailure)
+    async def provider_failed(request: Request, exc: ProviderFailure) -> JSONResponse:
+        if request.url.path.startswith("/memory/semantic/"):
+            return JSONResponse(
+                status_code=502,
+                content={
+                    "detail": (
+                        "Local embedding request failed. No fallback was used; "
+                        "rebuild failure preserves the previous index."
+                    )
+                },
+            )
+        return JSONResponse(
+            status_code=502, content={"detail": "Provider planning failed; no mission was created"}
+        )
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        return {"status": "ok", "capability": "discovery"}
+
+    from agentos.services.multi_agent_system import MultiAgentSystem
+    from agentos.services.background_watcher import BackgroundWatcherService
+    from agentos.adapters.chat_storage import ChatStorage
+    multi_agent = MultiAgentSystem()
+    watcher_service = BackgroundWatcherService(workspace_root=root)
+    chat_storage = ChatStorage(repository.path)
+
+    @app.get("/api/chat/sessions")
+    def list_chat_sessions_endpoint() -> dict[str, object]:
+        """Fetch all stored chat sessions with full messages and traces from SQLite."""
+        sessions = chat_storage.get_all_full_sessions()
+        return {"sessions": sessions, "db_path": str(repository.path)}
+
+    @app.get("/api/chat/sessions/{session_id}")
+    def get_chat_session_endpoint(session_id: str) -> dict[str, object]:
+        session = chat_storage.get_session(session_id)
+        if not session:
+            raise HTTPException(404, "Chat session not found")
+        return {"session": session}
+
+    @app.post("/api/chat/sessions/sync")
+    async def sync_chat_sessions_endpoint(request: Request) -> dict[str, object]:
+        """Bulk sync chat sessions from client into SQLite database."""
+        try:
+            body = await request.json()
+            sessions = body.get("sessions", [])
+            if isinstance(sessions, list):
+                chat_storage.sync_all_sessions(sessions)
+            return {"status": "ok", "saved_count": len(sessions)}
+        except Exception as e:
+            raise HTTPException(500, f"Failed to sync sessions: {e}")
+
+    @app.post("/api/chat/sessions")
+    async def save_chat_session_endpoint(request: Request) -> dict[str, object]:
+        try:
+            body = await request.json()
+            chat_storage.save_full_session(body)
+            return {"status": "ok", "session_id": body.get("id")}
+        except Exception as e:
+            raise HTTPException(500, f"Failed to save session: {e}")
+
+    @app.post("/api/chat/sessions/{session_id}/messages")
+    async def save_chat_message_endpoint(session_id: str, request: Request) -> dict[str, object]:
+        try:
+            msg = await request.json()
+            chat_storage.save_message(session_id, msg)
+            return {"status": "ok"}
+        except Exception as e:
+            raise HTTPException(500, f"Failed to save message: {e}")
+
+    @app.delete("/api/chat/sessions/{session_id}")
+    def delete_chat_session_endpoint(session_id: str) -> dict[str, object]:
+        deleted = chat_storage.delete_session(session_id)
+        return {"status": "ok", "deleted": deleted}
+
+    @app.post("/api/chat")
+    async def chat_endpoint(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+            session_id = body.get("session_id")
+            message = str(body.get("message", "")).strip()
+            role = body.get("role")
+            history = body.get("history")
+            if not isinstance(history, list):
+                history = None
+            if not message:
+                return JSONResponse(status_code=400, content={"error": "Message is required"})
+
+            import datetime
+            if session_id:
+                chat_storage.save_message(session_id, {
+                    "id": str(datetime.datetime.now().timestamp()),
+                    "role": "user",
+                    "content": message,
+                    "timestamp": datetime.datetime.now().strftime("%I:%M %p"),
+                })
+
+            import asyncio
+            result = await asyncio.to_thread(multi_agent.execute_goal, message, role, 6, history)
+
+            if session_id and isinstance(result, dict):
+                chat_storage.save_message(session_id, {
+                    "id": f"asst_{int(datetime.datetime.now().timestamp() * 1000)}",
+                    "role": "assistant",
+                    "content": result.get("content", ""),
+                    "agent": result.get("agent", role or "supervisor"),
+                    "model": result.get("model", ""),
+                    "trace": result.get("trace", []),
+                    "timestamp": datetime.datetime.now().strftime("%I:%M %p"),
+                })
+
+            return JSONResponse(content=result)
+        except Exception as e:
+            return JSONResponse(status_code=500, content={"error": str(e)})
+
+    @app.post("/api/chat/stream")
+    async def chat_stream_endpoint(request: Request) -> StreamingResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        session_id = body.get("session_id")
+        user_msg_id = body.get("user_message_id")
+        message = str(body.get("message", "")).strip()
+        role = body.get("role")
+        history = body.get("history")
+        engine = body.get("engine", "groq")
+        ollama_model = body.get("ollama_model", "llama3.2")
+        if not isinstance(history, list):
+            history = None
+
+        if session_id and message:
+            import datetime
+            chat_storage.save_message(session_id, {
+                "id": user_msg_id or str(datetime.datetime.now().timestamp()),
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.datetime.now().strftime("%I:%M %p"),
+            })
+
+        def sse_generator():
+            accumulated_reply = ""
+            accumulated_trace = []
+            try:
+                for chunk_str in multi_agent.execute_goal_stream(
+                    goal=message,
+                    role_override=role,
+                    history=history,
+                    engine=engine,
+                    ollama_model=ollama_model,
+                ):
+                    if chunk_str.startswith("data:"):
+                        try:
+                            import json
+                            raw_json = chunk_str[5:].strip()
+                            ev = json.loads(raw_json)
+                            if ev.get("type") == "delta":
+                                accumulated_reply += ev.get("text", "")
+                            elif ev.get("type") == "done":
+                                final_reply = ev.get("reply") or accumulated_reply
+                                final_trace = ev.get("trace") or accumulated_trace
+                                model_name = ev.get("model") or engine
+                                if session_id:
+                                    import datetime
+                                    chat_storage.save_message(session_id, {
+                                        "id": f"asst_{int(datetime.datetime.now().timestamp() * 1000)}",
+                                        "role": "assistant",
+                                        "content": final_reply,
+                                        "agent": role or "supervisor",
+                                        "model": model_name,
+                                        "trace": final_trace,
+                                        "timestamp": datetime.datetime.now().strftime("%I:%M %p"),
+                                    })
+                        except Exception:
+                            pass
+                    yield chunk_str
+            except Exception as err:
+                import json
+                yield f"data: {json.dumps({'type': 'error', 'error': str(err)})}\n\n"
+
+        return StreamingResponse(sse_generator(), media_type="text/event-stream")
+
+    @app.get("/api/engines")
+    async def engines_endpoint() -> dict[str, object]:
+        import httpx
+        groq_key = os.environ.get("GROQ_API_KEY") or os.environ.get("AGENTOS_MODEL_KEY") or ""
+        ollama_online = False
+        ollama_models: list[str] = []
+        try:
+            async with httpx.AsyncClient(timeout=1.5) as client:
+                res = await client.get("http://127.0.0.1:11434/api/tags")
+                if res.status_code == 200:
+                    ollama_online = True
+                    tags = res.json()
+                    ollama_models = [m.get("name", "") for m in tags.get("models", []) if m.get("name")]
+        except Exception:
+            ollama_online = False
+
+        return {
+            "groq": {
+                "available": bool(groq_key),
+                "model": os.environ.get("AGENTOS_MODEL", "openai/gpt-oss-120b"),
+            },
+            "ollama": {
+                "available": ollama_online,
+                "models": ollama_models or ["llama3.2", "deepseek-r1", "mistral"],
+            },
+        }
+
+    @app.get("/api/watchers")
+    def get_watchers_endpoint() -> dict[str, object]:
+        return {
+            "watchers": watcher_service.list_watchers(),
+            "history": watcher_service.get_history(),
+        }
+
+    @app.post("/api/watchers")
+    async def create_watcher_endpoint(request: Request) -> dict[str, object]:
+        body = await request.json()
+        name = str(body.get("name", "Custom Task")).strip()
+        command = str(body.get("command", "")).strip()
+        interval = int(body.get("interval_seconds", 180))
+        if not command:
+            raise HTTPException(status_code=400, detail="Command is required")
+        wid = watcher_service.add_watcher(name=name, command=command, interval_seconds=interval)
+        return {"status": "created", "id": wid}
+
+    @app.post("/api/watchers/{wid}/toggle")
+    def toggle_watcher_endpoint(wid: str) -> dict[str, object]:
+        new_state = watcher_service.toggle_watcher(wid)
+        if new_state is None:
+            raise HTTPException(status_code=404, detail="Watcher not found")
+        return {"status": "ok", "enabled": new_state}
+
+    @app.delete("/api/watchers/{wid}")
+    def delete_watcher_endpoint(wid: str) -> dict[str, object]:
+        deleted = watcher_service.delete_watcher(wid)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Watcher not found")
+        return {"status": "deleted"}
+
+    @app.post("/api/watchers/{wid}/run")
+    def run_watcher_endpoint(wid: str) -> dict[str, object]:
+        watcher_service.trigger_now(wid)
+        return {"status": "triggered"}
+
+    @app.get("/status")
+    def status() -> dict[str, object]:
+        return {
+            "provider_configured": model is not None,
+            "desktop_session": desktop_session,
+            "active_runs": orchestrator.active_run_count,
+            "model": model.settings.model if model else None,
+            "workspace_configured": workspace is not None,
+            "workspace_error": workspace_error,
+            "workspace_name": workspace.name if workspace else None,
+            "workspace_files": list(workspace.files) if workspace else [],
+            "test_commands": workspace.test_commands if workspace else [],
+            "user_role": role.value,
+            "memory_retrieval": "lexical",
+            "workflow_ready": any(
+                w["role_id"] == "developer" and w["ready"] for w in workflow_status()
+            ),
+            "workflows": workflow_status(),
+            "execution_mode": "demo" if demo_root is not None else "live",
+            "execution_label": DEMO_LABEL
+            if demo_root is not None
+            else "Configured model execution",
+            "demo_goal": DEMO_GOAL if demo_root is not None else None,
+        }
+
+    @app.get("/overview")
+    def overview() -> WorkspaceOverview:
+        return workspace_overview(
+            repository,
+            catalog,
+            "demo" if demo_root is not None else "live",
+            orchestrator.active_run_count,
+        )
+
+    @app.get("/memory")
+    def list_memory(
+        query: str = Query(default="", max_length=8000),
+        limit: int = Query(default=20, ge=1, le=100),
+    ) -> list[MemoryNote]:
+        return memory.notes(query, limit)
+
+    @app.get("/memory/semantic/status")
+    def semantic_status() -> dict[str, object]:
+        return {**semantic_memory.status(), "configuration_error": embedding_error}
+
+    @app.get("/memory/notes/{note_id}")
+    def memory_note(note_id: str) -> MemoryNote:
+        notes, _ = memory.memory_notes()
+        note = next((n for n in notes if n.id == note_id), None)
+        if note is None:
+            raise HTTPException(404, "Memory note unavailable in the current local corpus")
+        return note
+
+    @app.post("/memory/semantic/index")
+    async def rebuild_memory_index(request: MemoryRebuild) -> dict[str, object]:
+        require_operator(role)
+        return await semantic_memory.rebuild()
+
+    @app.post("/memory/semantic/search")
+    async def semantic_search(request: MemorySearch) -> MemoryResults:
+        return await semantic_memory.search(request)
+
+    @app.post("/memory", status_code=201)
+    def add_memory(request: MemoryCreate) -> MemoryNote:
+        require_operator(role)
+        for artifact_id in request.artifact_refs:
+            repository.artifact(artifact_id)
+        return memory.add_note(request)
+
+    @app.post("/workflows/developer", status_code=201)
+    async def create_developer_mission(request: DeveloperMissionCreate) -> Mission:
+        require_operator(role)
+        require_workflow("developer")
+        if demo_root is not None:
+            if request.goal != DEMO_GOAL:
+                raise StateConflict("Offline demo supports only its fixed Calculator mission")
+            demo_workspace(demo_root)
+            return missions.create(developer_mission(request.goal))
+        if planner is None:
+            raise StateConflict("Developer planner is unavailable")
+        try:
+            plan, planner_id = await planner.plan(request.goal)
+            compiled = compile_plan(request.goal, plan, planner_id, catalog, bindings)
+        except (ValueError, SchemaValidationError, KeyError):
+            raise MissionValidationError(
+                "Developer plan rejected: invalid graph, capability or IO contract"
+            ) from None
+        return missions.create(compiled)
+
+    @app.post("/workflows/creator", status_code=201)
+    async def create_creator_mission(request: CreatorMissionCreate) -> Mission:
+        require_operator(role)
+        require_workflow("creator")
+        if demo_root is not None and (
+            request.goal != CREATOR_DEMO_GOAL or request.sources or request.include_thumbnail
+        ):
+            raise StateConflict("Offline Creator demo supports only its fixed brief")
+        if demo_root is not None:
+            return missions.create(creator_mission(request.goal))
+        if creator_planner is None:
+            raise StateConflict("Creator planning is unavailable")
+        if (
+            request.include_thumbnail
+            and not next(w for w in workflow_status() if w["role_id"] == "creator")[
+                "thumbnail_ready"
+            ]
+        ):
+            raise StateConflict("Creator graphic thumbnail planning is unavailable")
+        if (
+            request.sources
+            and not next(w for w in workflow_status() if w["role_id"] == "creator")[
+                "source_research_ready"
+            ]
+        ):
+            raise StateConflict("Creator supplied-source research is unavailable")
+        try:
+            plan, planner_id = await creator_planner.plan(request)
+            mission = compile_creator_plan(request, plan, planner_id, catalog, bindings)
+        except (ValueError, KeyError, SchemaValidationError):
+            raise MissionValidationError(
+                "Creator plan rejected: invalid graph, capability or IO contract"
+            ) from None
+        return missions.create(mission)
+
+    @app.post("/workflows/student", status_code=201)
+    async def create_student_mission(request: StudentMissionCreate) -> Mission:
+        require_operator(role)
+        require_workflow("student")
+        if demo_root is not None and (
+            request.goal != STUDENT_DEMO_GOAL
+            or request.study_settings is not None
+            or request.sources
+        ):
+            raise StateConflict("Offline Student demo supports only its fixed study brief")
+        if demo_root is not None:
+            return missions.create(student_mission(request.goal))
+        if student_planner is None:
+            raise StateConflict("Student planning is unavailable")
+        if request.sources:
+            status = next(w for w in workflow_status() if w["role_id"] == "student")
+            if not status["source_research_ready"] or (
+                request.study_settings is not None and not status["source_focus_ready"]
+            ):
+                raise StateConflict("Student sourced research or Focus is unavailable")
+        if (
+            request.study_settings is not None
+            and not next(w for w in workflow_status() if w["role_id"] == "student")[
+                "study_planning_ready"
+            ]
+        ):
+            raise StateConflict("Student Focus is unavailable")
+        try:
+            plan, planner_id = await student_planner.plan(request)
+            mission = compile_student_plan(request, plan, planner_id, catalog, bindings)
+        except (ValueError, KeyError, SchemaValidationError):
+            raise MissionValidationError(
+                "Student plan rejected: invalid graph, capability or IO contract"
+            ) from None
+        return missions.create(mission)
+
+    @app.get("/agents")
+    def agents() -> list[AgentDefinition]:
+        return catalog.agents()
+
+    @app.get("/agents/{agent_id}")
+    def agent(agent_id: str) -> AgentDefinition:
+        try:
+            return catalog.agent(agent_id)
+        except KeyError as exc:
+            raise HTTPException(404, "Agent not found") from exc
+
+    @app.get("/roles")
+    def roles() -> list[RolePackage]:
+        return catalog.roles()
+
+    @app.get("/roles/{role_id}")
+    def get_role(role_id: str) -> RolePackage:
+        try:
+            return catalog.role(role_id)
+        except KeyError as exc:
+            raise HTTPException(404, "Role not found") from exc
+
+    @app.post("/missions", status_code=201)
+    def create_mission(request: MissionCreate) -> Mission:
+        require_operator(role)
+        if demo_root is not None:
+            raise StateConflict("Use a fixed workflow scenario in offline demo mode")
+        from agentos.services.student_sources import require_source_plan
+
+        require_source_plan(request, catalog)
+        if any(
+            t.agent_id in {a.id for a in catalog.agents() if a.capability == "developer_issue"}
+            for t in request.tasks
+        ) and not (
+            request.role_id == "developer"
+            and request.planning
+            and request.planning.contract_version == 3
+        ):
+            raise StateConflict("Local issues require a validated version-3 Developer plan")
+        if any(
+            t.agent_id in {a.id for a in catalog.agents() if a.capability == "creator_thumbnail"}
+            for t in request.tasks
+        ) and not (
+            request.role_id == "creator"
+            and request.planning
+            and request.planning.contract_version == 2
+        ):
+            raise StateConflict("Graphic thumbnails require an explicit validated Creator plan")
+        if request.role_id == "creator" and request.planning is not None:
+            validate_creator_plan(request, catalog, bindings)
+        if request.role_id == "student" and request.planning is not None:
+            validate_student_plan(request, catalog, bindings)
+        if request.role_id == "developer" and request.planning is not None:
+            validate_planned_mission(request, catalog, bindings)
+        return missions.create(request)
+
+    @app.get("/missions")
+    def list_missions(
+        limit: int = Query(default=50, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        query: str = Query(default="", max_length=200),
+        role_id: Identifier | None = None,
+        status: MissionStatus | None = None,
+    ) -> list[Mission]:
+        return repository.list_missions(limit, offset, query=query, role_id=role_id, status=status)
+
+    @app.get("/missions/{mission_id}")
+    def get_mission(mission_id: str) -> Mission:
+        return repository.get(mission_id)
+
+    @app.get("/missions/{mission_id}/events")
+    def mission_events(
+        mission_id: str,
+        after: int = Query(default=0, ge=0),
+        limit: int = Query(default=100, ge=1, le=1000),
+    ) -> list[MissionEvent]:
+        return repository.events(mission_id, after, limit)
+
+    @app.post("/missions/{mission_id}/tasks/{task_id}/actions")
+    def task_action(mission_id: str, task_id: str, request: TaskActionRequest) -> Mission:
+        require_operator(role)
+        managed = repository.get(mission_id)
+        if (
+            managed.planning is not None or has_sources(managed) or has_study_plan(managed)
+        ) and request.action != TaskAction.RETRY:
+            raise StateConflict(
+                "Planned missions use executor results; only explicit retry is allowed"
+            )
+        if demo_root is not None and request.action != TaskAction.RETRY:
+            raise StateConflict(
+                "Offline demo uses executor results; only explicit retry is allowed"
+            )
+        return missions.act(mission_id, task_id, request)
+
+    @app.get("/missions/{mission_id}/patch-revision")
+    def patch_revision_status(mission_id: str) -> PatchRevisionStatus:
+        return revisions.status(repository.get(mission_id))
+
+    @app.post("/missions/{mission_id}/patch-revision")
+    def request_patch_revision(mission_id: str, request: PatchRevisionRequest) -> Mission:
+        return revisions.request(mission_id, request, role)
+
+    @app.post("/missions/{mission_id}/cancel")
+    def cancel_mission(mission_id: str, request: VersionRequest) -> Mission:
+        require_operator(role)
+        return missions.cancel(mission_id, request.expected_version)
+
+    @app.post("/missions/{mission_id}/run")
+    async def run_mission(mission_id: str, request: VersionRequest) -> Mission:
+        return await orchestrator.run(mission_id, request.expected_version, role)
+
+    @app.get("/missions/{mission_id}/run")
+    def run_claim(mission_id: str) -> RunClaim | None:
+        return repository.claim(mission_id)
+
+    @app.post("/missions/{mission_id}/recover")
+    def recover_mission(mission_id: str, request: RecoveryRequest) -> Mission:
+        return orchestrator.recover(mission_id, request, role)
+
+    @app.get("/missions/{mission_id}/approvals")
+    def mission_approvals(mission_id: str, pending_only: bool = True) -> list[Approval]:
+        return repository.approvals(mission_id, pending_only)
+
+    @app.get("/approvals/{approval_id}")
+    def get_approval(approval_id: str) -> Approval:
+        return repository.approval(approval_id)
+
+    @app.post("/approvals/{approval_id}/decision")
+    def decide_approval(approval_id: str, request: ApprovalDecision) -> Mission:
+        return approvals.decide(approval_id, request, role)
+
+    @app.get("/missions/{mission_id}/artifacts")
+    def mission_artifacts(
+        mission_id: str,
+        limit: int = Query(default=100, ge=1, le=1000),
+        offset: int = Query(default=0, ge=0),
+    ) -> list[Artifact]:
+        return repository.artifacts(mission_id, limit, offset)
+
+    @app.get("/artifacts/{artifact_id}")
+    def get_artifact(artifact_id: str) -> Artifact:
+        return repository.artifact(artifact_id)
+
+    @app.get("/artifacts/{artifact_id}/content")
+    def artifact_content(artifact_id: str) -> Response:
+        artifact = repository.artifact(artifact_id)
+        disposition = "inline" if artifact.media_type == "image/png" else "attachment"
+        return Response(
+            content=storage.read(artifact),
+            media_type=artifact.media_type,
+            headers={"Content-Disposition": f'{disposition}; filename="{artifact.name}"'},
+        )
+
+    assets = frontend_root or Path("frontend/dist")
+    if assets.is_dir():
+        app.mount("/app", StaticFiles(directory=assets, html=True), name="mission-control")
+
+    return app
+
+
+def create_demo_app() -> FastAPI:
+    """Opt-in CLI factory; never selected because a provider is missing."""
+    return create_app(demo_root=Path.cwd())

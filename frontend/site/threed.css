@@ -1,0 +1,644 @@
+/* ==================== BLINKIT MEAL PLANNER & SMART UI STYLES ==================== */
+
+/* Form container when in Grocery Mode */
+.live-chat-form.grocery-mode {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.9rem !important;
+  padding: 1.15rem 1.25rem !important;
+  background: #0d1622 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Primary Action Button in Grocery Mode */
+.live-chat-form.grocery-mode #live-send {
+  position: relative !important;
+  z-index: 10 !important;
+  width: 100% !important;
+  min-height: 50px !important;
+  height: 50px !important;
+  max-height: 50px !important;
+  background: linear-gradient(135deg, #0c831f 0%, #169b2b 100%) !important;
+  border: 1px solid #34d399 !important;
+  color: #ffffff !important;
+  font-family: var(--sans) !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.65rem !important;
+  box-shadow: 0 4px 16px rgba(12, 131, 31, 0.35) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin-top: 0.2rem !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+}
+
+.live-chat-form.grocery-mode #live-send:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0e9624 0%, #1eb534 100%) !important;
+  border-color: #4ade80 !important;
+  box-shadow: 0 6px 22px rgba(12, 131, 31, 0.5) !important;
+  transform: translateY(-1px) !important;
+}
+
+.live-chat-form.grocery-mode #live-send:active:not(:disabled) {
+  transform: translateY(1px) !important;
+  box-shadow: 0 2px 8px rgba(12, 131, 31, 0.3) !important;
+}
+
+.live-chat-form.grocery-mode #live-send:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+/* Dedicated Meal Planner Wrapper */
+.grocery-inputs-wrap[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.grocery-inputs-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.9rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Header Bar */
+.grocery-header-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 0.6rem !important;
+  padding: 0.1rem 0.1rem 0.5rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.grocery-header-left {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.65rem !important;
+}
+
+.grocery-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  font-family: var(--sans) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  color: #4ade80 !important;
+  background: rgba(12, 131, 31, 0.15) !important;
+  border: 1px solid rgba(40, 201, 70, 0.35) !important;
+  padding: 0.25rem 0.65rem !important;
+  border-radius: 6px !important;
+}
+
+.grocery-sub {
+  font-size: 0.78rem !important;
+  color: #94a3b8 !important;
+  font-family: var(--sans) !important;
+  font-weight: 400 !important;
+}
+
+.grocery-clear-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  font-family: var(--sans) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  color: #f87171 !important;
+  border-radius: 6px !important;
+  padding: 0.28rem 0.65rem !important;
+  min-width: auto !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+
+.grocery-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+/* 3-Column Meal Cards Grid */
+.grocery-boxes-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0.85rem !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Individual Meal Card */
+.grocery-box {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.6rem !important;
+  background: #131d28 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 0.85rem !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.grocery-box:hover {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Breakfast Card */
+.grocery-box.meal-box-breakfast {
+  border-top: 3px solid #f59e0b !important;
+}
+.grocery-box.meal-box-breakfast .grocery-box-label {
+  color: #fbbf24 !important;
+}
+.grocery-box.meal-box-breakfast .meal-icon-wrap {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  color: #fbbf24 !important;
+}
+
+/* Lunch Card */
+.grocery-box.meal-box-lunch {
+  border-top: 3px solid #10b981 !important;
+}
+.grocery-box.meal-box-lunch .grocery-box-label {
+  color: #34d399 !important;
+}
+.grocery-box.meal-box-lunch .meal-icon-wrap {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  color: #34d399 !important;
+}
+
+/* Dinner Card */
+.grocery-box.meal-box-dinner {
+  border-top: 3px solid #38bdf8 !important;
+}
+.grocery-box.meal-box-dinner .grocery-box-label {
+  color: #7dd3fc !important;
+}
+.grocery-box.meal-box-dinner .meal-icon-wrap {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  color: #7dd3fc !important;
+}
+
+/* Card Header Label */
+.grocery-box-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  font-family: var(--sans) !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+.meal-icon-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 6px !important;
+  font-size: 0.95rem !important;
+}
+
+/* Meal Input Field */
+.grocery-box-input {
+  width: 100% !important;
+  height: 40px !important;
+  background: #0a1118 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  color: #ffffff !important;
+  font-family: var(--sans) !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  padding: 0 0.8rem !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+}
+
+.grocery-box-input::placeholder {
+  color: #64748b !important;
+  font-size: 0.8rem !important;
+  font-weight: 400 !important;
+}
+
+.grocery-box.meal-box-breakfast .grocery-box-input:focus {
+  border-color: #f59e0b !important;
+  background: #0e1722 !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18) !important;
+}
+
+.grocery-box.meal-box-lunch .grocery-box-input:focus {
+  border-color: #10b981 !important;
+  background: #0e1722 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18) !important;
+}
+
+.grocery-box.meal-box-dinner .grocery-box-input:focus {
+  border-color: #38bdf8 !important;
+  background: #0e1722 !important;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.18) !important;
+}
+
+/* Suggestions & Pills Container */
+.meal-quick-chips {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.4rem !important;
+  margin-top: 0.1rem !important;
+  padding-top: 0.5rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+.chips-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  font-family: var(--sans) !important;
+  font-size: 0.65rem !important;
+  font-weight: 600 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+}
+
+.chips-pills-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.35rem !important;
+  max-height: 85px !important;
+  overflow-y: auto !important;
+  padding-right: 0.15rem !important;
+}
+
+.chips-pills-wrap::-webkit-scrollbar {
+  width: 3px !important;
+}
+.chips-pills-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 2px !important;
+}
+
+.meal-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.3rem !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 9999px !important;
+  color: #cbd5e1 !important;
+  font-family: var(--sans) !important;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  padding: 0.22rem 0.62rem !important;
+  min-width: auto !important;
+  line-height: 1.25 !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.meal-pill:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.meal-pill:active,
+.meal-pill.selected {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+  transform: scale(0.96) !important;
+}
+
+/* Policy Note Banner */
+.grocery-policy-note {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  font-size: 0.76rem !important;
+  color: #a7f3d0 !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+  border-radius: 8px !important;
+  padding: 0.6rem 0.95rem !important;
+  font-family: var(--sans) !important;
+  line-height: 1.4 !important;
+  box-sizing: border-box !important;
+}
+
+.grocery-policy-note span {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+}
+
+/* Responsive Grid for Smaller Screens */
+@media (max-width: 860px) {
+  .grocery-boxes-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+  }
+}
+
+/* ==================== CLEAN DISH ERROR POP-UP MODAL ==================== */
+.dish-error-modal[hidden] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.dish-error-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1.5rem !important;
+}
+
+.dish-error-backdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(4, 8, 14, 0.85) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.dish-error-card {
+  position: relative !important;
+  z-index: 2 !important;
+  width: 100% !important;
+  max-width: 460px !important;
+  background: #141c26 !important;
+  border: 1px solid rgba(255, 99, 62, 0.4) !important;
+  border-radius: 12px !important;
+  padding: 1.8rem 1.6rem !important;
+  text-align: center !important;
+  color: var(--cream) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+}
+
+.dish-error-icon {
+  font-size: 2.8rem !important;
+  line-height: 1 !important;
+  margin-bottom: 0.6rem !important;
+}
+
+.dish-error-title {
+  font-family: var(--serif) !important;
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+  color: #ff856b !important;
+  margin: 0 0 0.6rem 0 !important;
+}
+
+.dish-error-desc {
+  font-size: 0.85rem !important;
+  line-height: 1.45 !important;
+  color: #c9d6e4 !important;
+  margin: 0 0 1rem 0 !important;
+}
+
+.dish-error-highlight {
+  color: #ff633e !important;
+  font-weight: 700 !important;
+  background: rgba(255, 99, 62, 0.12) !important;
+  padding: 0.1rem 0.35rem !important;
+  border-radius: 4px !important;
+}
+
+.dish-error-tip {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  padding: 0.65rem 0.8rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+  color: #9cb0c3 !important;
+  text-align: left !important;
+  margin-bottom: 1.25rem !important;
+}
+
+.dish-error-btn {
+  width: 100% !important;
+  background: #e0441d !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-family: var(--sans) !important;
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+  letter-spacing: 0.04em !important;
+  padding: 0.75rem 1.2rem !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease !important;
+}
+
+.dish-error-btn:hover {
+  background: #ff5733 !important;
+}
+
+/* ==================== BLINKIT CHAT ACTION CARD ==================== */
+.blinkit-chat-action-card {
+  margin-top: 0.85rem !important;
+  padding: 0.85rem 1rem !important;
+  background: rgba(12, 131, 31, 0.1) !important;
+  border: 1px solid rgba(40, 201, 70, 0.35) !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.65rem !important;
+}
+
+.cart-card-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+}
+
+.cart-card-icon {
+  font-size: 1.5rem !important;
+  line-height: 1 !important;
+}
+
+.cart-card-meta strong {
+  display: block !important;
+  font-family: var(--sans) !important;
+  font-size: 0.82rem !important;
+  color: #4ade80 !important;
+  letter-spacing: 0.02em !important;
+}
+
+.cart-card-meta small {
+  display: block !important;
+  font-size: 0.72rem !important;
+  color: #a4b8ca !important;
+  margin-top: 0.1rem !important;
+}
+
+.blinkit-direct-link-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  padding: 0.6rem 1.1rem !important;
+  background: #0c831f !important;
+  border: 1px solid #32d753 !important;
+  border-radius: 6px !important;
+  color: #ffffff !important;
+  font-family: var(--sans) !important;
+  font-weight: 700 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.04em !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.blinkit-direct-link-btn:hover {
+  background: #149c29 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(12, 131, 31, 0.35) !important;
+}
+
+/* ==================== POLISHED TOP SUGGESTIONS BAR ==================== */
+.smart-suggestions-bar {
+  padding: 0.75rem 1.25rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: #111b26 !important;
+}
+
+.sugg-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 0.55rem !important;
+}
+
+.sugg-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.sugg-icon {
+  font-size: 0.88rem !important;
+}
+
+.sugg-title {
+  font-family: var(--sans) !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  color: var(--orange) !important;
+}
+
+.sugg-role-pill {
+  font-family: var(--sans) !important;
+  font-size: 0.64rem !important;
+  font-weight: 600 !important;
+  color: #38bdf8 !important;
+  background: rgba(56, 189, 248, 0.1) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  padding: 0.12rem 0.45rem !important;
+  border-radius: 4px !important;
+  text-transform: uppercase !important;
+}
+
+.sugg-refresh-btn {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #94a3b8 !important;
+  font-family: var(--sans) !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  padding: 0.22rem 0.55rem !important;
+  transition: all 0.15s ease !important;
+}
+
+.sugg-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+.sugg-chips-wrap {
+  display: flex !important;
+  gap: 0.45rem !important;
+  overflow-x: auto !important;
+  padding-bottom: 0.35rem !important;
+  scroll-behavior: smooth !important;
+}
+
+.sugg-chips-wrap::-webkit-scrollbar {
+  height: 4px !important;
+}
+.sugg-chips-wrap::-webkit-scrollbar-thumb {
+  background: #334155 !important;
+  border-radius: 2px !important;
+}
+
+.sugg-chip {
+  background: #172433 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #e2e8f0 !important;
+  font-family: var(--sans) !important;
+  font-size: 0.74rem !important;
+  font-weight: 500 !important;
+  padding: 0.38rem 0.8rem !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+  flex-shrink: 0 !important;
+}
+
+.sugg-chip:hover {
+  background: #1f3246 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
+}
+
+.sugg-chip:active {
+  transform: translateY(0) !important;
+}
